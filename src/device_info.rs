@@ -42,11 +42,11 @@ impl DeviceInfo {
     pub fn from_raw(d: rtaudio_sys::rtaudio_device_info_t) -> Self {
         let mut sample_rates = Vec::new();
         for sr in d.sample_rates.iter() {
-            if *sr <= 0 {
+            if *sr == 0 {
                 break;
             }
 
-            sample_rates.push(*sr as u32);
+            sample_rates.push(*sr);
         }
 
         // Safe because i8 and u8 have the same size, and we are correctly
@@ -54,7 +54,7 @@ impl DeviceInfo {
         let name_slice: &[u8] =
             unsafe { std::slice::from_raw_parts(d.name.as_ptr() as *const u8, d.name.len()) };
 
-        let name = match CStr::from_bytes_until_nul(&name_slice) {
+        let name = match CStr::from_bytes_until_nul(name_slice) {
             Ok(n) => n.to_string_lossy().to_string(),
             Err(e) => {
                 log::error!("RtAudio: Failed to parse audio device name: {}", e);
@@ -64,14 +64,14 @@ impl DeviceInfo {
         };
 
         Self {
-            id: DeviceID(d.id as u32),
-            output_channels: d.output_channels as u32,
-            input_channels: d.input_channels as u32,
-            duplex_channels: d.duplex_channels as u32,
+            id: DeviceID(d.id),
+            output_channels: d.output_channels,
+            input_channels: d.input_channels,
+            duplex_channels: d.duplex_channels,
             is_default_output: d.is_default_output != 0,
             is_default_input: d.is_default_input != 0,
             native_formats: NativeFormats::from_bits_truncate(d.native_formats),
-            preferred_sample_rate: d.preferred_sample_rate as u32,
+            preferred_sample_rate: d.preferred_sample_rate,
             sample_rates,
             name,
         }

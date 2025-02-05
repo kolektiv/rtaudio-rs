@@ -1,6 +1,21 @@
-use crate::error::{RtAudioError, RtAudioErrorType};
-use crate::{Api, DeviceID, DeviceInfo, DeviceParams, SampleFormat, StreamHandle, StreamOptions};
-use std::os::raw::{c_int, c_uint};
+use std::os::raw::{
+    c_int,
+    c_uint,
+};
+
+use crate::{
+    error::{
+        RtAudioError,
+        RtAudioErrorType,
+    },
+    Api,
+    DeviceID,
+    DeviceInfo,
+    DeviceParams,
+    SampleFormat,
+    StreamHandle,
+    StreamOptions,
+};
 
 /// An RtAudio Host instance. This is used to enumerate audio devices before
 /// opening a stream.
@@ -87,9 +102,9 @@ impl Host {
         Ok(DeviceInfo::from_raw(device_info_raw))
     }
 
-    /// Retrieve an iterator over all the available audio devices (including ones
-    /// that have failed to scan properly).
-    pub fn iter_devices_complete<'a>(&'a self) -> DeviceIter<'a> {
+    /// Retrieve an iterator over all the available audio devices (including
+    /// ones that have failed to scan properly).
+    pub fn iter_devices_complete(&self) -> DeviceIter<'_> {
         let num_devices = self.num_devices();
         DeviceIter {
             index: 0,
@@ -102,7 +117,7 @@ impl Host {
     ///
     /// If there was a problem scanning a device, a warning will be printed
     /// to the log.
-    pub fn iter_devices<'a>(&'a self) -> impl Iterator<Item = DeviceInfo> + 'a {
+    pub fn iter_devices(&self) -> impl Iterator<Item = DeviceInfo> + '_ {
         self.iter_devices_complete().filter_map(|d| match d {
             Ok(d) => Some(d),
             Err(e) => {
@@ -117,7 +132,7 @@ impl Host {
     ///
     /// If there was a problem scanning a device, a warning will be printed
     /// to the log.
-    pub fn iter_output_devices<'a>(&'a self) -> impl Iterator<Item = DeviceInfo> + 'a {
+    pub fn iter_output_devices(&self) -> impl Iterator<Item = DeviceInfo> + '_ {
         self.iter_devices_complete().filter_map(|d| match d {
             Ok(d) => {
                 if d.output_channels > 0 {
@@ -138,7 +153,7 @@ impl Host {
     ///
     /// If there was a problem scanning a device, a warning will be printed
     /// to the log.
-    pub fn iter_input_devices<'a>(&'a self) -> impl Iterator<Item = DeviceInfo> + 'a {
+    pub fn iter_input_devices(&self) -> impl Iterator<Item = DeviceInfo> + '_ {
         self.iter_devices_complete().filter_map(|d| match d {
             Ok(d) => {
                 if d.input_channels > 0 {
@@ -159,7 +174,7 @@ impl Host {
     ///
     /// If there was a problem scanning a device, a warning will be printed
     /// to the log.
-    pub fn iter_duplex_devices<'a>(&'a self) -> impl Iterator<Item = DeviceInfo> + 'a {
+    pub fn iter_duplex_devices(&self) -> impl Iterator<Item = DeviceInfo> + '_ {
         self.iter_devices_complete().filter_map(|d| match d {
             Ok(d) => {
                 if d.duplex_channels > 0 {
@@ -176,27 +191,25 @@ impl Host {
         })
     }
 
-    /*
-    /// Retrieve a list of available audio devices.
-    pub fn devices(&self) -> Vec<DeviceInfo> {
-        self.iter_devices().collect()
-    }
-
-    /// Retrieve a list of available output audio devices.
-    pub fn output_devices(&self) -> Vec<DeviceInfo> {
-        self.iter_output_devices().collect()
-    }
-
-    /// Retrieve a list of available input audio devices.
-    pub fn input_devices(&self) -> Vec<DeviceInfo> {
-        self.iter_input_devices().collect()
-    }
-
-    /// Retrieve a list of available duplex audio devices.
-    pub fn duplex_devices(&self) -> Vec<DeviceInfo> {
-        self.iter_duplex_devices().collect()
-    }
-    */
+    // Retrieve a list of available audio devices.
+    // pub fn devices(&self) -> Vec<DeviceInfo> {
+    // self.iter_devices().collect()
+    // }
+    //
+    // Retrieve a list of available output audio devices.
+    // pub fn output_devices(&self) -> Vec<DeviceInfo> {
+    // self.iter_output_devices().collect()
+    // }
+    //
+    // Retrieve a list of available input audio devices.
+    // pub fn input_devices(&self) -> Vec<DeviceInfo> {
+    // self.iter_input_devices().collect()
+    // }
+    //
+    // Retrieve a list of available duplex audio devices.
+    // pub fn duplex_devices(&self) -> Vec<DeviceInfo> {
+    // self.iter_duplex_devices().collect()
+    // }
 
     /// Returns the device ID (not index) of the default output device.
     pub fn default_output_device_id(&self) -> Option<DeviceID> {
@@ -248,24 +261,26 @@ impl Host {
 
     /// Open a new audio stream.
     ///
-    /// * `output_device` - The parameters for the output device to use. If you do
-    /// not wish to use an output device, set this to `None`.
-    /// * `input_device` - The parameters for the input device to use. If you do not
-    /// wish to use an input device, set this to `None`.
-    /// * `sample_format` - The sample format to use. If the device doesn't natively
-    /// support the given format, then it will automatically be converted to/from
-    /// that format.
+    /// * `output_device` - The parameters for the output device to use. If you
+    ///   do not wish to use an output device, set this to `None`.
+    /// * `input_device` - The parameters for the input device to use. If you do
+    ///   not wish to use an input device, set this to `None`.
+    /// * `sample_format` - The sample format to use. If the device doesn't
+    ///   natively support the given format, then it will automatically be
+    ///   converted to/from that format.
     /// * `sample_rate` - The sample rate to use. The stream may decide to use a
-    /// different sample rate if it's not supported.
-    /// * `buffer_frames` - The desired maximum number of frames that can appear in a
-    /// single process call. The stream may decide to use a different value if it's
-    /// not supported. The given value should be a power of 2.
+    ///   different sample rate if it's not supported.
+    /// * `buffer_frames` - The desired maximum number of frames that can appear
+    ///   in a single process call. The stream may decide to use a different
+    ///   value if it's not supported. The given value should be a power of 2.
     /// * `options` - Additional options for the stream.
-    /// * `error_callback` - This will be called if there was an error that caused the
-    /// stream to close. If this happens, the returned `Stream` struct should be
-    /// manually closed or dropped.
+    /// * `error_callback` - This will be called if there was an error that
+    ///   caused the stream to close. If this happens, the returned `Stream`
+    ///   struct should be manually closed or dropped.
     ///
-    /// Only one stream can be opened at a time (this is a limitation with RtAudio).
+    /// Only one stream can be opened at a time (this is a limitation with
+    /// RtAudio).
+    #[allow(clippy::too_many_arguments)]
     pub fn open_stream<E>(
         self,
         output_device: Option<DeviceParams>,
@@ -311,7 +326,7 @@ pub struct DeviceIter<'a> {
     instance: &'a Host,
 }
 
-impl<'a> Iterator for DeviceIter<'a> {
+impl Iterator for DeviceIter<'_> {
     type Item = Result<DeviceInfo, RtAudioError>;
 
     fn next(&mut self) -> Option<Self::Item> {

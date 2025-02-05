@@ -1,6 +1,12 @@
+use std::{
+    ffi::{
+        CStr,
+        CString,
+    },
+    os::raw::c_char,
+};
+
 use bitflags::bitflags;
-use std::ffi::{CStr, CString};
-use std::os::raw::c_char;
 
 bitflags! {
     /// The native formats this device supports.
@@ -33,13 +39,13 @@ bitflags! {
 
 /// The sample format type.
 ///
-/// Support for signed integers and floats. Audio data fed to/from an RtAudio stream
-/// is assumed to ALWAYS be in host byte order. The internal routines will
-/// automatically take care of any necessary byte-swapping between the host format
-/// and the soundcard. Thus, endian-ness is not a concern in the following format
-/// definitions.
+/// Support for signed integers and floats. Audio data fed to/from an RtAudio
+/// stream is assumed to ALWAYS be in host byte order. The internal routines
+/// will automatically take care of any necessary byte-swapping between the host
+/// format and the soundcard. Thus, endian-ness is not a concern in the
+/// following format definitions.
 #[repr(usize)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SampleFormat {
     /// 8-bit signed integer.
     SInt8 = rtaudio_sys::RTAUDIO_FORMAT_SINT8 as usize,
@@ -52,6 +58,7 @@ pub enum SampleFormat {
     /// 32-bit signed integer.
     SInt32 = rtaudio_sys::RTAUDIO_FORMAT_SINT32 as usize,
     /// 32-bit floating point number, normalized between plus/minus 1.0.
+    #[default]
     Float32 = rtaudio_sys::RTAUDIO_FORMAT_FLOAT32 as usize,
     /// 64-bit floating point number, normalized between plus/minus 1.0.
     Float64 = rtaudio_sys::RTAUDIO_FORMAT_FLOAT64 as usize,
@@ -67,12 +74,6 @@ impl SampleFormat {
             SampleFormat::Float32 => rtaudio_sys::RTAUDIO_FORMAT_FLOAT32,
             SampleFormat::Float64 => rtaudio_sys::RTAUDIO_FORMAT_FLOAT64,
         }
-    }
-}
-
-impl Default for SampleFormat {
-    fn default() -> Self {
-        SampleFormat::Float32
     }
 }
 
@@ -116,25 +117,25 @@ bitflags! {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Api {
     /// Search for a default working compiled API.
-    Unspecified = rtaudio_sys::RTAUDIO_API_UNSPECIFIED as i32,
+    Unspecified = rtaudio_sys::RTAUDIO_API_UNSPECIFIED,
     /// Macintosh OS-X Core Audio API.
-    MacOSXCore = rtaudio_sys::RTAUDIO_API_MACOSX_CORE as i32,
+    MacOSXCore = rtaudio_sys::RTAUDIO_API_MACOSX_CORE,
     /// The Advanced Linux Sound Architecture API.
-    LinuxALSA = rtaudio_sys::RTAUDIO_API_LINUX_ALSA as i32,
+    LinuxALSA = rtaudio_sys::RTAUDIO_API_LINUX_ALSA,
     /// The Jack Low-Latency Audio Server API.
-    UnixJack = rtaudio_sys::RTAUDIO_API_UNIX_JACK as i32,
+    UnixJack = rtaudio_sys::RTAUDIO_API_UNIX_JACK,
     /// The Linux PulseAudio API.
-    LinuxPulse = rtaudio_sys::RTAUDIO_API_LINUX_PULSE as i32,
+    LinuxPulse = rtaudio_sys::RTAUDIO_API_LINUX_PULSE,
     /// The Linux Open Sound System API.
-    LinuxOSS = rtaudio_sys::RTAUDIO_API_LINUX_OSS as i32,
+    LinuxOSS = rtaudio_sys::RTAUDIO_API_LINUX_OSS,
     /// The Steinberg Audio Stream I/O API.
-    WindowsASIO = rtaudio_sys::RTAUDIO_API_WINDOWS_ASIO as i32,
+    WindowsASIO = rtaudio_sys::RTAUDIO_API_WINDOWS_ASIO,
     /// The Microsoft WASAPI API.
-    WindowsWASAPI = rtaudio_sys::RTAUDIO_API_WINDOWS_WASAPI as i32,
+    WindowsWASAPI = rtaudio_sys::RTAUDIO_API_WINDOWS_WASAPI,
     /// The Microsoft DirectSound API.
-    WindowsDS = rtaudio_sys::RTAUDIO_API_WINDOWS_DS as i32,
+    WindowsDS = rtaudio_sys::RTAUDIO_API_WINDOWS_DS,
     /// A compilable but non-functional API.
-    Dummy = rtaudio_sys::RTAUDIO_API_DUMMY as i32,
+    Dummy = rtaudio_sys::RTAUDIO_API_DUMMY,
 }
 
 impl Api {
@@ -197,15 +198,7 @@ impl Api {
         // Safe because we have constructed a valid C String.
         let index = unsafe { rtaudio_sys::rtaudio_compiled_api_by_name(c_name.as_ptr()) };
 
-        if let Some(a) = Self::from_raw(index) {
-            if a == Api::Unspecified {
-                None
-            } else {
-                Some(a)
-            }
-        } else {
-            None
-        }
+        Self::from_raw(index).filter(|&a| a != Api::Unspecified)
     }
 
     pub fn from_raw(a: rtaudio_sys::rtaudio_api_t) -> Option<Api> {

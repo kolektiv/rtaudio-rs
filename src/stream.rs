@@ -1,10 +1,27 @@
-use std::ffi::CStr;
-use std::os::raw::{c_int, c_uint, c_void};
-use std::pin::Pin;
-use std::sync::Mutex;
+use std::{
+    ffi::CStr,
+    os::raw::{
+        c_int,
+        c_uint,
+        c_void,
+    },
+    pin::Pin,
+    // sync::Mutex,
+};
 
-use crate::error::{RtAudioError, RtAudioErrorType};
-use crate::{Buffers, DeviceParams, Host, SampleFormat, StreamFlags, StreamOptions, StreamStatus};
+use crate::{
+    error::{
+        RtAudioError,
+        RtAudioErrorType,
+    },
+    Buffers,
+    DeviceParams,
+    Host,
+    SampleFormat,
+    StreamFlags,
+    StreamOptions,
+    StreamStatus,
+};
 
 /// Information about a running RtAudio stream.
 #[derive(Debug, Clone, Default)]
@@ -51,6 +68,7 @@ pub struct StreamHandle {
 }
 
 impl StreamHandle {
+    #[allow(clippy::too_many_arguments)]
     pub(crate) fn new<E>(
         mut host: Host,
         output_device: Option<DeviceParams>,
@@ -59,7 +77,7 @@ impl StreamHandle {
         sample_rate: u32,
         buffer_frames: u32,
         options: StreamOptions,
-        error_callback: E,
+        _error_callback: E,
     ) -> Result<StreamHandle, (Host, RtAudioError)>
     where
         E: FnOnce(RtAudioError) + Send + 'static,
@@ -111,21 +129,18 @@ impl StreamHandle {
                 std::ptr::null_mut()
             };
 
-        {
-            let mut cb_singleton = ERROR_CB_SINGLETON.lock().unwrap();
+        // {
+        //     let mut cb_singleton = ERROR_CB_SINGLETON.lock().unwrap();
 
-            if cb_singleton.cb.is_some() {
-                return Err((
-                    host,
-                    RtAudioError {
-                        type_: RtAudioErrorType::InvalidUse,
-                        msg: Some("Only one RtAudio stream can exist at a time".into()),
-                    },
-                ));
-            }
+        //     if cb_singleton.cb.is_some() {
+        //         return Err((host, RtAudioError {
+        //             type_: RtAudioErrorType::InvalidUse,
+        //             msg: Some("Only one RtAudio stream can exist at a time".into()),
+        //         }));
+        //     }
 
-            cb_singleton.cb = Some(Box::new(error_callback));
-        }
+        //     cb_singleton.cb = Some(Box::new(error_callback));
+        // }
 
         let mut buffer_frames_res = buffer_frames as c_uint;
 
@@ -153,9 +168,9 @@ impl StreamHandle {
             unsafe {
                 rtaudio_sys::rtaudio_close_stream(raw);
             }
-            {
-                ERROR_CB_SINGLETON.lock().unwrap().cb = None;
-            }
+            // {
+            //     ERROR_CB_SINGLETON.lock().unwrap().cb = None;
+            // }
             return Err((host, e));
         }
 
@@ -173,9 +188,9 @@ impl StreamHandle {
             unsafe {
                 rtaudio_sys::rtaudio_close_stream(raw);
             }
-            {
-                ERROR_CB_SINGLETON.lock().unwrap().cb = None;
-            }
+            // {
+            //     ERROR_CB_SINGLETON.lock().unwrap().cb = None;
+            // }
             return Err((host, e));
         }
 
@@ -191,9 +206,9 @@ impl StreamHandle {
             unsafe {
                 rtaudio_sys::rtaudio_close_stream(raw);
             }
-            {
-                ERROR_CB_SINGLETON.lock().unwrap().cb = None;
-            }
+            // {
+            //     ERROR_CB_SINGLETON.lock().unwrap().cb = None;
+            // }
             return Err((host, e));
         }
 
@@ -219,8 +234,8 @@ impl StreamHandle {
 
     /// Start the stream.
     ///
-    /// * `data_callback` - This gets called whenever there are new buffers
-    /// to process.
+    /// * `data_callback` - This gets called whenever there are new buffers to
+    ///   process.
     ///
     /// If an error is returned, then it means that the stream failed to
     /// start.
@@ -301,9 +316,9 @@ impl StreamHandle {
 
 impl Drop for StreamHandle {
     fn drop(&mut self) {
-        {
-            ERROR_CB_SINGLETON.lock().unwrap().cb = None;
-        }
+        // {
+        //     ERROR_CB_SINGLETON.lock().unwrap().cb = None;
+        // }
 
         if self.raw.is_null() {
             return;
@@ -323,6 +338,7 @@ impl Drop for StreamHandle {
     }
 }
 
+#[allow(clippy::type_complexity)]
 struct CallbackContext {
     info: StreamInfo,
     cb: Box<dyn FnMut(Buffers<'_>, &StreamInfo, StreamStatus) + Send + 'static>,
@@ -373,14 +389,14 @@ pub(crate) unsafe extern "C" fn raw_data_callback(
     0
 }
 
-lazy_static::lazy_static! {
-    static ref ERROR_CB_SINGLETON: Mutex<ErrorCallbackSingleton> =
-        Mutex::new(ErrorCallbackSingleton { cb: None });
-}
+// lazy_static::lazy_static! {
+//     static ref ERROR_CB_SINGLETON: Mutex<ErrorCallbackSingleton> =
+//         Mutex::new(ErrorCallbackSingleton { cb: None });
+// }
 
-pub(crate) struct ErrorCallbackSingleton {
-    cb: Option<Box<dyn FnOnce(RtAudioError) + Send + 'static>>,
-}
+// pub(crate) struct ErrorCallbackSingleton {
+//     cb: Option<Box<dyn FnOnce(RtAudioError) + Send + 'static>>,
+// }
 
 #[no_mangle]
 pub(crate) unsafe extern "C" fn raw_error_callback(
@@ -412,8 +428,10 @@ pub(crate) unsafe extern "C" fn raw_error_callback(
 
         let e = RtAudioError { type_, msg };
 
-        if let Some(cb) = { ERROR_CB_SINGLETON.lock().unwrap().cb.take() } {
-            (cb)(e);
-        }
+        println!("error: {e:#?}");
+
+        // if let Some(cb) = { ERROR_CB_SINGLETON.lock().unwrap().cb.take() } {
+        //     (cb)(e);
+        // }
     }
 }

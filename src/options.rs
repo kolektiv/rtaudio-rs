@@ -1,9 +1,22 @@
-use rtaudio_sys::MAX_NAME_LENGTH;
-use std::ffi::CString;
-use std::os::raw::{c_char, c_int, c_uint};
+use std::{
+    ffi::CString,
+    os::raw::{
+        c_char,
+        c_int,
+        c_uint,
+    },
+};
 
-use crate::error::{RtAudioError, RtAudioErrorType};
-use crate::{DeviceID, StreamFlags};
+use rtaudio_sys::MAX_NAME_LENGTH;
+
+use crate::{
+    error::{
+        RtAudioError,
+        RtAudioErrorType,
+    },
+    DeviceID,
+    StreamFlags,
+};
 
 /// Used for specifying the parameters of a device when opening a
 /// stream.
@@ -45,16 +58,18 @@ pub struct StreamOptions {
     /// By default, no flags are set.
     pub flags: StreamFlags,
 
-    /// Used to control stream latency in the Windows DirectSound, Linux OSS, and Linux Alsa APIs only.
-    /// A value of two is usually the smallest allowed. Larger numbers can potentially result in more
-    /// robust stream performance, though likely at the cost of stream latency.
+    /// Used to control stream latency in the Windows DirectSound, Linux OSS,
+    /// and Linux Alsa APIs only. A value of two is usually the smallest
+    /// allowed. Larger numbers can potentially result in more robust stream
+    /// performance, though likely at the cost of stream latency.
     ///
     /// The actual value used when the stream is ran may be different.
     ///
     /// The default value is `4`.
     pub num_buffers: u32,
 
-    /// Scheduling priority of callback thread (only used with flag `StreamFlags::SCHEDULE_REALTIME`).
+    /// Scheduling priority of callback thread (only used with flag
+    /// `StreamFlags::SCHEDULE_REALTIME`).
     ///
     /// Use a value of `-1` for the default priority.
     ///
@@ -102,13 +117,13 @@ fn str_to_c_array<const MAX_LEN: usize>(s: &str) -> Result<[c_char; MAX_LEN], ()
     let cs_slice =
         unsafe { std::slice::from_raw_parts(cs_slice.as_ptr() as *const c_char, cs_slice.len()) };
 
-    if cs_slice.len() > MAX_LEN as usize {
+    if cs_slice.len() > MAX_LEN {
         return Err(());
     }
 
     let mut c_array: [c_char; MAX_LEN] = [0; MAX_LEN];
 
-    c_array[0..cs_slice.len()].copy_from_slice(&cs_slice);
+    c_array[0..cs_slice.len()].copy_from_slice(cs_slice);
 
     Ok(c_array)
 }
